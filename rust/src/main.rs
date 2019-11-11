@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::collections::{HashMap, HashSet};
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::PathBuf;
@@ -54,6 +54,43 @@ mod tests {
         }
 
         assert_eq!(result, Some(81204));
+    }
+
+    #[test]
+    fn test_day_2_part_1() {
+        let mut doubles = 0;
+        let mut triples = 0;
+
+        let values = load_input("2018-2")
+            .lines()
+            .map(|l| l.unwrap())
+            .collect::<Vec<_>>();
+
+        // To speed things up I could create a 26 item Vec and convert the
+        // character to an index.
+        let mut char_counts = HashMap::<char, u32>::new();
+
+        for value in values {
+            char_counts.clear();
+
+            for c in value.chars() {
+                *char_counts.entry(c).or_insert(0) += 1;
+            }
+
+            doubles += if char_counts.values().any(|v| *v == 2) {
+                1
+            } else {
+                0
+            };
+
+            triples += if char_counts.values().any(|v| *v == 3) {
+                1
+            } else {
+                0
+            };
+        }
+
+        assert_eq!(doubles * triples, 9139);
     }
 }
 
