@@ -4,6 +4,7 @@ mod tests {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
     use std::path::PathBuf;
+    use std::str::FromStr;
 
     fn load_input(file_name: &str) -> impl BufRead {
         const RES_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../inputs");
@@ -133,6 +134,78 @@ mod tests {
             commonalities(result.0, result.1),
             String::from("uqcidadzwtnhsljvxyobmkfyr")
         );
+    }
+
+    #[test]
+    fn test_day_3_part_1() {
+        #[derive(Eq, Hash, PartialEq)]
+        struct Point {
+            x: u16,
+            y: u16,
+        }
+
+        #[derive(Debug)]
+        struct Rect {
+            x: u16,
+            y: u16,
+            w: u16,
+            h: u16,
+        }
+
+        #[derive(Default)]
+        struct Fabric {
+            pub claims: HashMap<Point, u16>,
+        }
+
+        impl Fabric {
+            fn add_claim(&mut self, r: &Rect) {
+                for x in r.x..r.x + r.w {
+                    for y in r.y..r.y + r.h {
+                        let p = Point { x, y };
+                        *self.claims.entry(p).or_insert(0) += 1;
+                    }
+                }
+            }
+
+            fn get_contested_inches_count(&self) -> usize {
+                self.claims.values().filter(|v| **v > 1).count()
+            }
+        }
+
+        impl FromStr for Rect {
+            type Err = ();
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let subs: Vec<&str> = s.split_whitespace().collect();
+                let points: Vec<&str> = subs[2].split(",").collect();
+                let dimensions: Vec<&str> = subs[3].split("x").collect();
+
+                let rect = Rect {
+                    x: points[0].parse().unwrap(),
+                    // https://github.com/rust-lang/rfcs/issues/2249
+                    y: points[1][..points[1].len() - 1].parse().unwrap(),
+                    w: dimensions[0].parse().unwrap(),
+                    h: dimensions[1].parse().unwrap(),
+                };
+
+                Ok(rect)
+            }
+        }
+
+        let mut fabric = Fabric::default();
+
+        let rects: Vec<Rect> = load_input("2018-3")
+            .lines()
+            .map(|l| l.unwrap())
+            .map(|l| Rect::from_str(&l))
+            .map(|r| r.unwrap())
+            .collect();
+
+        for rect in rects {
+            fabric.add_claim(&rect);
+        }
+
+        assert_eq!(fabric.get_contested_inches_count(), 111_485);
     }
 }
 
