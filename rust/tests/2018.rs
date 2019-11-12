@@ -208,7 +208,3 @@ mod tests {
         assert_eq!(fabric.get_contested_inches_count(), 111_485);
     }
 }
-
-fn main() {
-    println!("Use `cargo test`");
-}
