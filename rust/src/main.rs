@@ -92,6 +92,48 @@ mod tests {
 
         assert_eq!(doubles * triples, 9139);
     }
+
+    #[test]
+    fn test_day_2_part_2() {
+        fn differences<'a>(left: &'a str, right: &'a str) -> usize {
+            left.chars()
+                .zip(right.chars())
+                .filter(|(l, r)| l != r)
+                .count()
+        }
+
+        fn commonalities(left: &str, right: &str) -> String {
+            left.chars()
+                .zip(right.chars())
+                .filter(|(l, r)| l == r)
+                .map(|(l, _)| l)
+                .collect()
+        }
+
+        fn find_correct_boxes<'a>(ids: &'a [String]) -> Option<(&'a str, &'a str)> {
+            for left in ids {
+                for right in ids {
+                    if differences(&left, &right) == 1 {
+                        return Some((&left, &right));
+                    }
+                }
+            }
+
+            None
+        }
+
+        let values = load_input("2018-2")
+            .lines()
+            .map(|l| l.unwrap())
+            .collect::<Vec<_>>();
+
+        let result = find_correct_boxes(&values).expect("Couldn't find the correct boxes");
+
+        assert_eq!(
+            commonalities(result.0, result.1),
+            String::from("uqcidadzwtnhsljvxyobmkfyr")
+        );
+    }
 }
 
 fn main() {
