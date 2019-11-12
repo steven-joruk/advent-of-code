@@ -153,6 +153,27 @@ mod tests {
             h: u16,
         }
 
+        impl FromStr for Rect {
+            type Err = ();
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                let subs: Vec<&str> = s.split_whitespace().collect();
+                let points: Vec<&str> = subs[2].split(",").collect();
+                let dimensions: Vec<&str> = subs[3].split("x").collect();
+
+                let rect = Rect {
+                    id: subs[0][1..].parse().unwrap(),
+                    x: points[0].parse().unwrap(),
+                    // https://github.com/rust-lang/rfcs/issues/2249
+                    y: points[1][..points[1].len() - 1].parse().unwrap(),
+                    w: dimensions[0].parse().unwrap(),
+                    h: dimensions[1].parse().unwrap(),
+                };
+
+                Ok(rect)
+            }
+        }
+
         #[derive(Default)]
         struct Fabric {
             pub claims: HashMap<Point, u16>,
@@ -184,27 +205,6 @@ mod tests {
                 }
 
                 true
-            }
-        }
-
-        impl FromStr for Rect {
-            type Err = ();
-
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                let subs: Vec<&str> = s.split_whitespace().collect();
-                let points: Vec<&str> = subs[2].split(",").collect();
-                let dimensions: Vec<&str> = subs[3].split("x").collect();
-
-                let rect = Rect {
-                    id: subs[0][1..].parse().unwrap(),
-                    x: points[0].parse().unwrap(),
-                    // https://github.com/rust-lang/rfcs/issues/2249
-                    y: points[1][..points[1].len() - 1].parse().unwrap(),
-                    w: dimensions[0].parse().unwrap(),
-                    h: dimensions[1].parse().unwrap(),
-                };
-
-                Ok(rect)
             }
         }
 
