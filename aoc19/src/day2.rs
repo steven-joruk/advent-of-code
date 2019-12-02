@@ -43,16 +43,7 @@ impl From<&[Cell<u32>]> for Instruction {
     }
 }
 
-fn part1() {
-    let mut program: Vec<Cell<u32>> = INPUT
-        .split(',')
-        .map(|s| s.parse::<u32>().unwrap())
-        .map(Cell::new)
-        .collect();
-
-    program[1].set(12);
-    program[2].set(2);
-
+fn run(program: &mut [Cell<u32>]) {
     for instruction in program.chunks(INSTRUCTION_SIZE).map(Instruction::from) {
         match instruction {
             Instruction::Add(op) => {
@@ -64,11 +55,51 @@ fn part1() {
             Instruction::End => {
                 break;
             }
-            _ => unimplemented!(),
         }
     }
+}
+
+fn part1() {
+    let mut program: Vec<Cell<u32>> = INPUT
+        .split(',')
+        .map(|s| s.parse::<u32>().unwrap())
+        .map(Cell::new)
+        .collect();
+
+    program[1].set(12);
+    program[2].set(2);
+
+    run(&mut program);
 
     println!("Address 0 holds {}", program[0].get());
 }
 
-fn part2() {}
+fn part2() {
+    let program: Vec<Cell<u32>> = INPUT
+        .split(',')
+        .map(|s| s.parse::<u32>().unwrap())
+        .map(Cell::new)
+        .collect();
+
+    let desired_result = 19_690_720;
+
+    for noun in 0..100 {
+        for verb in 0..100 {
+            let mut instance = program.clone();
+            instance[1].set(noun);
+            instance[2].set(verb);
+            run(&mut instance);
+            if instance[0].get() == desired_result {
+                println!(
+                    "Noun = {}, verb = {}. 100 * noun + verb = {}",
+                    noun,
+                    verb,
+                    100 * noun + verb
+                );
+                return;
+            }
+        }
+    }
+
+    println!("No noun and verb combination yields {}", desired_result);
+}
