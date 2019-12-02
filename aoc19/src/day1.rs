@@ -10,7 +10,7 @@ fn fuel_required_for_module(mass: i32) -> i32 {
 }
 
 fn part1() {
-    let mut module_fuel: i32 = INPUT
+    let module_fuel: i32 = INPUT
         .lines()
         .map(|l| l.parse::<i32>().unwrap())
         .map(fuel_required_for_module)
