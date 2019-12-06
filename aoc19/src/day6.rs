@@ -31,4 +31,34 @@ pub fn solve() {
     }
 
     println!("Total orbits: {}", total);
+
+    fn ancestors_between(child: &str, ancestor: &str, orbits: &HashMap<&str, &str>) -> Option<u32> {
+        let mut count = 0;
+        let mut cur = child;
+
+        while cur != ancestor {
+            cur = orbits.get(cur)?;
+            count += 1;
+        }
+
+        Some(count)
+    }
+
+    let mut cur = orbits["YOU"];
+    let mut my_hops = 0;
+
+    let total = loop {
+        if let Some(v) = ancestors_between("SAN", cur, &orbits) {
+            break Some(my_hops + v - 1);
+        }
+
+        if cur == "COM" {
+            break None;
+        }
+
+        cur = orbits[cur];
+        my_hops += 1;
+    };
+
+    println!("Transfers between me and santa: {:?}", total);
 }
