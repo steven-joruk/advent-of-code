@@ -29,13 +29,7 @@ fn store(mem: &mut [i32], addr: usize, value: i32) {
     mem[dest] = value;
 }
 
-pub fn solve() {
-    let mut mem: Vec<i32> = INPUT
-        .split(',')
-        .map(|s| s.parse::<i32>().unwrap())
-        .collect();
-
-    let input: i32 = 1;
+pub fn run(mem: &mut [i32], input: i32) -> i32 {
     let mut output: i32 = 0;
 
     let mut i = 0;
@@ -67,22 +61,52 @@ pub fn solve() {
             1 => {
                 let left_value = load(&mem, left_mode, i + 1);
                 let right_value = load(&mem, right_mode, i + 2);
-                store(&mut mem, i + 3, left_value + right_value);
+                store(mem, i + 3, left_value + right_value);
                 i += 4;
             }
             2 => {
                 let left_value = load(&mem, left_mode, i + 1);
                 let right_value = load(&mem, right_mode, i + 2);
-                store(&mut mem, i + 3, left_value * right_value);
+                store(mem, i + 3, left_value * right_value);
                 i += 4;
             }
             3 => {
-                store(&mut mem, i + 1, input);
+                store(mem, i + 1, input);
                 i += 2;
             }
             4 => {
                 output = load(&mem, Mode::Indirect, i + 1);
                 i += 2;
+            }
+            5 => {
+                let value = load(mem, left_mode, i + 1);
+                if value != 0 {
+                    i = load(mem, right_mode, i + 2) as usize;
+                } else {
+                    i += 3;
+                }
+            }
+            6 => {
+                let value = load(mem, left_mode, i + 1);
+                if value == 0 {
+                    i = load(mem, right_mode, i + 2) as usize;
+                } else {
+                    i += 3;
+                }
+            }
+            7 => {
+                let left_value = load(mem, left_mode, i + 1);
+                let right_value = load(mem, right_mode, i + 2);
+                let value = if left_value < right_value { 1 } else { 0 };
+                store(mem, i + 3, value);
+                i += 4;
+            }
+            8 => {
+                let left_value = load(mem, left_mode, i + 1);
+                let right_value = load(mem, right_mode, i + 2);
+                let value = if left_value == right_value { 1 } else { 0 };
+                store(mem, i + 3, value);
+                i += 4;
             }
             99 => {
                 break;
@@ -91,5 +115,18 @@ pub fn solve() {
         }
     }
 
+    output
+}
+
+pub fn solve() {
+    let mem: Vec<i32> = INPUT
+        .split(',')
+        .map(|s| s.parse::<i32>().unwrap())
+        .collect();
+
+    let output = run(&mut mem.clone(), 1);
+    println!("Program output: {}", output);
+
+    let output = run(&mut mem.clone(), 5);
     println!("Program output: {}", output);
 }
