@@ -9,9 +9,11 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
         .map(|s| s.parse::<i32>().unwrap())
         .collect();
 
+    let mut last_output: i32 = 0;
+
     match Computer::new(&program).add_input(1).run()? {
-        StepResult::OutputAvailable(output) => println!("5.1 {:?}", output),
-        StepResult::Finished => panic!("Program finished before returning output"),
+        StepResult::OutputAvailable(output) => last_output = output,
+        StepResult::Finished => println!("5.2 {:?}", last_output),
         StepResult::NeedInput => panic!("Program needs input"),
     }
 
