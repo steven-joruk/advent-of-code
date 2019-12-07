@@ -30,7 +30,7 @@ pub fn solve() {
         }
     }
 
-    println!("Total orbits: {}", total);
+    println!("6.1 {}", total);
 
     fn ancestors_between(child: &str, ancestor: &str, orbits: &HashMap<&str, &str>) -> Option<u32> {
         let mut count = 0;
@@ -60,5 +60,5 @@ pub fn solve() {
         my_hops += 1;
     };
 
-    println!("Transfers between me and santa: {:?}", total);
+    println!("6.2 {:?}", total);
 }

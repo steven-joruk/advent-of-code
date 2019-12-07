@@ -10,13 +10,13 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
         .collect();
 
     match Computer::new(&program).add_input(1).run()? {
-        StepResult::OutputAvailable(output) => println!("Program output: {:?}", output),
+        StepResult::OutputAvailable(output) => println!("5.1 {:?}", output),
         StepResult::Finished => panic!("Program finished before returning output"),
         StepResult::NeedInput => panic!("Program needs input"),
     }
 
     match Computer::new(&program).add_input(5).run()? {
-        StepResult::OutputAvailable(output) => println!("Program output: {:?}", output),
+        StepResult::OutputAvailable(output) => println!("5.2 {:?}", output),
         StepResult::Finished => panic!("Program finished before returning output"),
         StepResult::NeedInput => panic!("Program needs input"),
     }

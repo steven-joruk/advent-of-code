@@ -19,7 +19,7 @@ fn part1() {
     cpu.run().unwrap();
     let result = cpu.load(Mode::Immediate, 0);
 
-    println!("Address 0 holds {}", result);
+    println!("2.1 {}", result);
 }
 
 fn part2() {
@@ -37,12 +37,7 @@ fn part2() {
             cpu.store(2, verb);
             cpu.run().unwrap();
             if cpu.load(Mode::Immediate, 0) == desired_result {
-                println!(
-                    "Noun = {}, verb = {}. 100 * noun + verb = {}",
-                    noun,
-                    verb,
-                    100 * noun + verb
-                );
+                println!("2.2 {}", 100 * noun + verb);
                 return;
             }
         }

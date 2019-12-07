@@ -16,7 +16,7 @@ fn part1() {
         .map(fuel_required_for_module)
         .sum();
 
-    println!("Module fuel requirements: {}", module_fuel);
+    println!("1.1 {}", module_fuel);
 }
 
 fn fuel_required_for_module_and_its_fuel(mass: i32) -> i32 {
@@ -41,5 +41,5 @@ fn part2() {
         .map(fuel_required_for_module_and_its_fuel)
         .sum();
 
-    println!("Total fuel requirements: {}", total_fuel);
+    println!("1.2 {}", total_fuel);
 }

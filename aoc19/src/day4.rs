@@ -89,8 +89,8 @@ pub fn solve() {
     let higher = 675_869;
 
     let passwords = Passwords::new(lower, higher, false);
-    println!("Number of passwords: {}", passwords.count());
+    println!("4.1 {}", passwords.count());
 
     let passwords = Passwords::new(lower, higher, true);
-    println!("Number of passwords: {}", passwords.count());
+    println!("4.2 {}", passwords.count());
 }

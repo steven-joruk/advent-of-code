@@ -205,7 +205,7 @@ pub fn solve() {
 
     let intersections = find_path_intersections(&wire1_path, &wire2_path);
     let min = intersections.iter().map(|p| p.manhattan_distance()).min();
-    println!("The manhattan distance is {:?}", min);
+    println!("3.1 {:?}", min);
 
     let mut steps = Vec::new();
 
@@ -216,5 +216,5 @@ pub fn solve() {
     }
 
     let min = steps.iter().min();
-    println!("Minimum steps required: {:?}", min);
+    println!("3.2 {:?}", min);
 }

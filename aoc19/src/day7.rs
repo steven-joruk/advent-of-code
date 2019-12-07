@@ -5,10 +5,10 @@ static INPUT: &str = include_str!("../res/7");
 
 pub fn solve() -> Result<(), Box<dyn Error>> {
     let result = solve_with_input(INPUT, false)?;
-    println!("Maximum thrusters signal: {:?}", result);
+    println!("7.1 {:?}", result);
 
     let result = solve_with_input(INPUT, true)?;
-    println!("Maximum thrusters signal in feedback mode: {:?}", result);
+    println!("7.2 {:?}", result);
 
     Ok(())
 }
