@@ -1,5 +1,12 @@
+use std::collections::VecDeque;
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
+
+pub enum StepResult {
+    OutputAvailable(i32),
+    NeedInput,
+    Finished,
+}
 
 #[repr(u8)]
 enum Opcode {
@@ -51,15 +58,30 @@ impl From<char> for Mode {
 
 pub struct Computer<'a> {
     program: &'a [i32],
+    inputs: VecDeque<i32>,
     mem: Vec<i32>,
+    pc: usize,
 }
 
 impl<'a> Computer<'a> {
     pub fn new(program: &'a [i32]) -> Self {
         Computer {
             program,
+            inputs: VecDeque::new(),
             mem: program.to_vec(),
+            pc: 0,
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.inputs.clear();
+        self.mem = self.program.to_vec();
+        self.pc = 0;
+    }
+
+    pub fn add_input<'b>(&'b mut self, value: i32) -> &'b mut Self {
+        self.inputs.push_back(value);
+        self
     }
 
     #[inline]
@@ -76,20 +98,10 @@ impl<'a> Computer<'a> {
         self.mem[addr as usize] = value;
     }
 
-    #[inline]
-    pub fn reset(&mut self) {
-        self.mem = self.program.to_vec();
-    }
-
-    /// Runs the loaded program. The memory isn't automatically reset between
-    /// runs.
-    pub fn run(&mut self, inputs: &[i32]) -> Result<i32, Box<dyn Error>> {
-        let mut output: i32 = 0;
-        let mut pc = 0;
-        let mut remaining_inputs = inputs;
-
-        while pc < self.mem.len() {
-            let mut opstr = self.mem[pc].to_string();
+    /// Runs until I/O is required, or the program has ended.
+    pub fn run(&mut self) -> Result<StepResult, Box<dyn Error>> {
+        loop {
+            let opstr = self.mem[self.pc].to_string();
 
             let opcode = if opstr.len() == 1 {
                 opstr[opstr.len() - 1..].parse::<u8>()?
@@ -103,68 +115,71 @@ impl<'a> Computer<'a> {
 
             match opcode.try_into()? {
                 Opcode::Add => {
-                    let left_value = self.load(left_mode, pc + 1);
-                    let right_value = self.load(right_mode, pc + 2);
-                    let dest = self.load(Mode::Immediate, pc + 3) as usize;
+                    let left_value = self.load(left_mode, self.pc + 1);
+                    let right_value = self.load(right_mode, self.pc + 2);
+                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
                     self.store(dest, left_value + right_value);
-                    pc += 4;
+                    self.pc += 4;
                 }
                 Opcode::Multiply => {
-                    let left_value = self.load(left_mode, pc + 1);
-                    let right_value = self.load(right_mode, pc + 2);
-                    let dest = self.load(Mode::Immediate, pc + 3) as usize;
+                    let left_value = self.load(left_mode, self.pc + 1);
+                    let right_value = self.load(right_mode, self.pc + 2);
+                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
                     self.store(dest, left_value * right_value);
-                    pc += 4;
+                    self.pc += 4;
                 }
                 Opcode::Input => {
-                    let dest = self.load(Mode::Immediate, pc + 1) as usize;
-                    let input = remaining_inputs[0];
-                    remaining_inputs = &remaining_inputs[1..];
+                    if self.inputs.is_empty() {
+                        return Ok(StepResult::NeedInput);
+                    }
+
+                    let dest = self.load(Mode::Immediate, self.pc + 1) as usize;
+                    let input = self.inputs.pop_front().unwrap();
                     self.store(dest, input);
-                    pc += 2;
+                    self.pc += 2;
                 }
                 Opcode::Output => {
-                    output = self.load(Mode::Indirect, pc + 1);
-                    pc += 2;
+                    let output = self.load(Mode::Indirect, self.pc + 1);
+                    self.pc += 2;
+                    return Ok(StepResult::OutputAvailable(output));
                 }
                 Opcode::JumpIfLess => {
-                    let value = self.load(left_mode, pc + 1);
+                    let value = self.load(left_mode, self.pc + 1);
                     if value != 0 {
-                        pc = self.load(right_mode, pc + 2) as usize;
+                        self.pc = self.load(right_mode, self.pc + 2) as usize;
                     } else {
-                        pc += 3;
+                        self.pc += 3;
                     }
                 }
                 Opcode::JumpIfEqual => {
-                    let value = self.load(left_mode, pc + 1);
+                    let value = self.load(left_mode, self.pc + 1);
                     if value == 0 {
-                        pc = self.load(right_mode, pc + 2) as usize;
+                        self.pc = self.load(right_mode, self.pc + 2) as usize;
                     } else {
-                        pc += 3;
+                        self.pc += 3;
                     }
                 }
                 Opcode::IsLess => {
-                    let left_value = self.load(left_mode, pc + 1);
-                    let right_value = self.load(right_mode, pc + 2);
-                    let dest = self.load(Mode::Immediate, pc + 3) as usize;
-                    let value = if left_value < right_value { 1 } else { 0 };
-                    self.store(dest, value);
-                    pc += 4;
+                    let left_value = self.load(left_mode, self.pc + 1);
+                    let right_value = self.load(right_mode, self.pc + 2);
+                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
+                    let result = if left_value < right_value { 1 } else { 0 };
+                    self.store(dest, result);
+                    self.pc += 4;
                 }
                 Opcode::IsEqual => {
-                    let left_value = self.load(left_mode, pc + 1);
-                    let right_value = self.load(right_mode, pc + 2);
-                    let dest = self.load(Mode::Immediate, pc + 3) as usize;
-                    let value = if left_value == right_value { 1 } else { 0 };
-                    self.store(dest, value);
-                    pc += 4;
+                    let left_value = self.load(left_mode, self.pc + 1);
+                    let right_value = self.load(right_mode, self.pc + 2);
+                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
+                    let result = if left_value == right_value { 1 } else { 0 };
+                    self.store(dest, result);
+                    self.pc += 4;
                 }
                 Opcode::End => {
-                    break;
+                    self.pc = self.mem.len();
+                    return Ok(StepResult::Finished);
                 }
             }
         }
-
-        Ok(output)
     }
 }

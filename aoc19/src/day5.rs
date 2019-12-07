@@ -1,4 +1,4 @@
-use crate::intcode::Computer;
+use crate::intcode::{Computer, StepResult};
 use std::error::Error;
 
 static INPUT: &str = include_str!("../res/5");
@@ -9,15 +9,17 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
         .map(|s| s.parse::<i32>().unwrap())
         .collect();
 
-    let mut cpu = Computer::new(&program);
+    match Computer::new(&program).add_input(1).run()? {
+        StepResult::OutputAvailable(output) => println!("Program output: {:?}", output),
+        StepResult::Finished => panic!("Program finished before returning output"),
+        StepResult::NeedInput => panic!("Program needs input"),
+    }
 
-    let output = cpu.run(&[1])?;
-    println!("Program output: {}", output);
-
-    cpu.reset();
-
-    let output = cpu.run(&[5])?;
-    println!("Program output: {}", output);
+    match Computer::new(&program).add_input(5).run()? {
+        StepResult::OutputAvailable(output) => println!("Program output: {:?}", output),
+        StepResult::Finished => panic!("Program finished before returning output"),
+        StepResult::NeedInput => panic!("Program needs input"),
+    }
 
     Ok(())
 }

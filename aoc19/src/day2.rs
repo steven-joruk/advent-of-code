@@ -16,7 +16,7 @@ fn part1() {
     let mut cpu = Computer::new(&program);
     cpu.store(1, 12);
     cpu.store(2, 12);
-    cpu.run(&[]).unwrap();
+    cpu.run().unwrap();
     let result = cpu.load(Mode::Immediate, 0);
 
     println!("Address 0 holds {}", result);
@@ -28,15 +28,14 @@ fn part2() {
         .map(|s| s.parse::<i32>().unwrap())
         .collect();
 
-    let mut cpu = Computer::new(&program);
     let desired_result = 19_690_720;
 
     for noun in 0..100 {
         for verb in 0..100 {
-            cpu.reset();
+            let mut cpu = Computer::new(&program);
             cpu.store(1, noun);
             cpu.store(2, verb);
-            cpu.run(&[]);
+            cpu.run().unwrap();
             if cpu.load(Mode::Immediate, 0) == desired_result {
                 println!(
                     "Noun = {}, verb = {}. 100 * noun + verb = {}",

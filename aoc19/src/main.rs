@@ -15,7 +15,7 @@ fn main() {
     day2::solve();
     day3::solve();
     day4::solve();
-    day5::solve();
+    day5::solve().unwrap();
     day6::solve();
-    day7::solve();
+    day7::solve().unwrap();
 }
