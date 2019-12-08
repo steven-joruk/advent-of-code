@@ -21,6 +21,9 @@ enum Opcode {
     End = 99,
 }
 
+/// The `enum_primitive` crate would remove the need for this.
+/// Also interesting discussions here:
+/// https://internals.rust-lang.org/t/pre-rfc-adding-conversion-to-from-integer-on-enums-with-repr-i-u/8758
 impl TryFrom<u8> for Opcode {
     type Error = String;
 
