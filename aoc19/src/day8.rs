@@ -1,20 +1,20 @@
-use crate::intcode::{Computer, StepResult};
-use std::error::Error;
-
 static INPUT: &str = include_str!("../res/8");
 static WIDTH: usize = 25;
 static HEIGHT: usize = 6;
+static AREA: usize = WIDTH * HEIGHT;
 
-pub fn solve() -> Result<(), Box<dyn Error>> {
-    let layers = INPUT.as_bytes().chunks(WIDTH * HEIGHT);
+pub fn solve() {
+    let layers = INPUT.as_bytes().chunks(AREA);
 
     // Doing it this way was just for fun, it's not particularly nice.
     // Convert each layer in to a tuple of (0_pixels, 1_pixels, 2_pixels) so
     // you can have all totals as the result.
     let pixel_counts = layers
-        .map(|l| {
-            l.iter()
-                .map(|p| match p {
+        .clone()
+        .map(|layer| {
+            layer
+                .iter()
+                .map(|pixel| match pixel {
                     b'0' => (1, 0, 0),
                     b'1' => (0, 1, 0),
                     b'2' => (0, 0, 1),
@@ -29,5 +29,24 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
     let twos = pixel_counts.2;
 
     println!("8.1 {:?}", ones * twos);
-    Ok(())
+
+    let mut image = Vec::new();
+    image.resize(AREA, b' ');
+
+    for layer in layers.rev() {
+        for i in 0..AREA {
+            match layer[i] {
+                b'0' => image[i] = b' ',
+                b'1' => image[i] = b'#',
+                _ => continue,
+            }
+        }
+    }
+
+    println!("8.2");
+
+    image
+        .chunks(WIDTH)
+        .map(|line| std::str::from_utf8(line).unwrap())
+        .for_each(|line| println!("{}", line));
 }
