@@ -13,7 +13,7 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run_circuit(amps: &mut [&mut Computer]) -> i32 {
+fn run_circuit(amps: &mut [&mut Computer]) -> i64 {
     let mut last_output = None;
 
     loop {
@@ -34,13 +34,13 @@ fn run_circuit(amps: &mut [&mut Computer]) -> i32 {
     }
 }
 
-fn solve_with_input(input: &str, feedback_mode: bool) -> Result<i32, Box<dyn Error>> {
-    let program: Vec<i32> = input
+fn solve_with_input(input: &str, feedback_mode: bool) -> Result<i64, Box<dyn Error>> {
+    let program: Vec<i64> = input
         .split(',')
-        .map(|s| s.parse::<i32>().unwrap())
+        .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
-    let mut maximum_output: Option<i32> = None;
+    let mut maximum_output: Option<i64> = None;
 
     let (lower, upper) = if feedback_mode { (5, 10) } else { (0, 5) };
 

@@ -2,187 +2,261 @@ use std::collections::VecDeque;
 use std::convert::{TryFrom, TryInto};
 use std::error::Error;
 
+#[derive(Debug, PartialEq)]
 pub enum StepResult {
-    OutputAvailable(i32),
+    OutputAvailable(i64),
     NeedInput,
     Finished,
 }
 
+/// Modes are in respect to their operand order.
+#[derive(Debug)]
 #[repr(u8)]
 enum Opcode {
-    Add = 1,
-    Multiply = 2,
-    Input = 3,
-    Output = 4,
-    JumpIfLess = 5,
-    JumpIfEqual = 6,
-    IsLess = 7,
-    IsEqual = 8,
-    End = 99,
+    Add(Mode, Mode, Mode),
+    Multiply(Mode, Mode, Mode),
+    Input(Mode),
+    Output(Mode),
+    JumpIfTrue(Mode, Mode),
+    JumpIfFalse(Mode, Mode),
+    IsLess(Mode, Mode, Mode),
+    IsEqual(Mode, Mode, Mode),
+    ModifyBase(Mode),
+    End,
 }
 
 /// The `enum_primitive` crate would remove the need for this.
 /// Also interesting discussions here:
 /// https://internals.rust-lang.org/t/pre-rfc-adding-conversion-to-from-integer-on-enums-with-repr-i-u/8758
-impl TryFrom<u8> for Opcode {
-    type Error = String;
+impl From<i64> for Opcode {
+    fn from(v: i64) -> Self {
+        let opstr = format!("{:5}", v);
 
-    fn try_from(v: u8) -> Result<Self, Self::Error> {
-        match v {
-            x if x == Opcode::Add as u8 => Ok(Opcode::Add),
-            x if x == Opcode::Multiply as u8 => Ok(Opcode::Multiply),
-            x if x == Opcode::Input as u8 => Ok(Opcode::Input),
-            x if x == Opcode::Output as u8 => Ok(Opcode::Output),
-            x if x == Opcode::JumpIfLess as u8 => Ok(Opcode::JumpIfLess),
-            x if x == Opcode::JumpIfEqual as u8 => Ok(Opcode::JumpIfEqual),
-            x if x == Opcode::IsLess as u8 => Ok(Opcode::IsLess),
-            x if x == Opcode::IsEqual as u8 => Ok(Opcode::IsEqual),
-            x if x == Opcode::End as u8 => Ok(Opcode::End),
-            _ => Err(format!("Unknown opcode: {}", v).into()),
+        let mode_2: Option<Mode> = opstr[0..1].try_into().ok();
+        let mode_1: Option<Mode> = opstr[1..2].try_into().ok();
+        let mode_0: Option<Mode> = opstr[2..3].try_into().ok();
+
+        let kind = if &opstr[3..4] == " " {
+            opstr[4..].parse::<u8>().unwrap()
+        } else {
+            opstr[3..].parse::<u8>().unwrap()
+        };
+
+        match kind {
+            1 => Opcode::Add(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+                mode_2.unwrap_or(Mode::Immediate),
+            ),
+            2 => Opcode::Multiply(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+                mode_2.unwrap_or(Mode::Immediate),
+            ),
+            3 => Opcode::Input(mode_0.unwrap_or(Mode::Immediate)),
+            4 => Opcode::Output(mode_0.unwrap_or(Mode::Indirect)),
+            5 => Opcode::JumpIfTrue(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+            ),
+            6 => Opcode::JumpIfFalse(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+            ),
+            7 => Opcode::IsLess(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+                mode_2.unwrap_or(Mode::Immediate),
+            ),
+            8 => Opcode::IsEqual(
+                mode_0.unwrap_or(Mode::Indirect),
+                mode_1.unwrap_or(Mode::Indirect),
+                mode_2.unwrap_or(Mode::Immediate),
+            ),
+            9 => Opcode::ModifyBase(mode_0.unwrap_or(Mode::Indirect)),
+            99 => Opcode::End,
+            _ => panic!("Unknown opcode: {}", kind),
         }
     }
 }
 
-#[derive(PartialEq)]
+impl Opcode {
+    pub fn len(&self) -> usize {
+        match self {
+            Opcode::Add(_, _, _) => 4,
+            Opcode::Multiply(_, _, _) => 4,
+            Opcode::Input(_) => 2,
+            Opcode::Output(_) => 2,
+            Opcode::JumpIfTrue(_, _) => 3,
+            Opcode::JumpIfFalse(_, _) => 3,
+            Opcode::IsLess(_, _, _) => 4,
+            Opcode::IsEqual(_, _, _) => 4,
+            Opcode::ModifyBase(_) => 2,
+            Opcode::End => 0,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Mode {
     Indirect,
     Immediate,
+    Relative,
 }
 
-impl From<char> for Mode {
-    fn from(c: char) -> Self {
-        if c == '1' {
-            Mode::Immediate
-        } else {
-            Mode::Indirect
+impl TryFrom<&str> for Mode {
+    type Error = String;
+
+    fn try_from(c: &str) -> Result<Self, Self::Error> {
+        match c {
+            "0" => Ok(Mode::Indirect),
+            "1" => Ok(Mode::Immediate),
+            "2" => Ok(Mode::Relative),
+            _ => Err(format!("Couldn't convert {} to a mode", c).into()),
         }
     }
 }
 
+#[derive(Default)]
 pub struct Computer<'a> {
-    program: &'a [i32],
-    inputs: VecDeque<i32>,
-    mem: Vec<i32>,
+    program: &'a [i64],
+    inputs: VecDeque<i64>,
+    mem: Vec<i64>,
     pc: usize,
+    base: i64,
 }
 
 impl<'a> Computer<'a> {
-    pub fn new(program: &'a [i32]) -> Self {
-        Computer {
-            program,
-            inputs: VecDeque::new(),
-            mem: program.to_vec(),
-            pc: 0,
-        }
+    pub fn new(program: &'a [i64]) -> Self {
+        let mut cpu = Computer::default();
+        cpu.program = program;
+        cpu.reset();
+        cpu
     }
 
     pub fn reset(&mut self) {
         self.inputs.clear();
         self.mem = self.program.to_vec();
         self.pc = 0;
+        self.base = 0;
     }
 
-    pub fn add_input<'b>(&'b mut self, value: i32) -> &'b mut Self {
+    pub fn add_input<'b>(&'b mut self, value: i64) -> &'b mut Self {
         self.inputs.push_back(value);
         self
     }
 
     #[inline]
-    pub fn load(&mut self, mode: Mode, addr: usize) -> i32 {
-        if mode == Mode::Immediate {
-            self.mem[addr as usize]
+    fn checked_load(&mut self, addr: usize) -> i64 {
+        if addr >= self.mem.len() {
+            self.mem.resize(addr, 0);
+            0
         } else {
-            self.mem[self.mem[addr as usize] as usize]
+            self.mem[addr]
         }
     }
 
     #[inline]
-    pub fn store(&mut self, addr: usize, value: i32) {
+    pub fn load_value(&mut self, mode: &Mode, offset: usize) -> i64 {
+        match mode {
+            Mode::Indirect => {
+                let offset = self.checked_load(offset) as usize;
+                self.checked_load(offset)
+            }
+            Mode::Immediate => self.checked_load(offset),
+            Mode::Relative => {
+                let offset = (self.base + self.checked_load(offset)) as usize;
+                self.checked_load(offset)
+            }
+        }
+    }
+
+    #[inline]
+    fn load_address(&mut self, mode: &Mode, offset: usize) -> usize {
+        match mode {
+            Mode::Indirect => self.load_value(mode, offset) as usize,
+            Mode::Immediate => self.load_value(mode, offset) as usize,
+            Mode::Relative => (self.base + self.checked_load(offset)) as usize,
+        }
+    }
+
+    #[inline]
+    pub fn store(&mut self, addr: usize, value: i64) {
+        if addr as usize >= self.mem.len() {
+            self.mem.resize(addr + 1, 0);
+        }
+
         self.mem[addr as usize] = value;
     }
 
     /// Runs until I/O is required, or the program has ended.
     pub fn run(&mut self) -> Result<StepResult, Box<dyn Error>> {
         loop {
-            let opstr = self.mem[self.pc].to_string();
+            let opcode: Opcode = self.mem[self.pc].into();
 
-            let opcode = if opstr.len() == 1 {
-                opstr[opstr.len() - 1..].parse::<u8>()?
-            } else {
-                opstr[opstr.len() - 2..].parse::<u8>()?
-            };
-
-            // It'd be nicer if Rust had negative indexing already.
-            let right_mode: Mode = opstr.chars().rev().nth(3).unwrap_or('0').into();
-            let left_mode: Mode = opstr.chars().rev().nth(2).unwrap_or('0').into();
-
-            match opcode.try_into()? {
-                Opcode::Add => {
-                    let left_value = self.load(left_mode, self.pc + 1);
-                    let right_value = self.load(right_mode, self.pc + 2);
-                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
+            match &opcode {
+                Opcode::Add(left_mode, right_mode, dest_mode) => {
+                    let left_value = self.load_value(&left_mode, self.pc + 1);
+                    let right_value = self.load_value(&right_mode, self.pc + 2);
+                    let dest = self.load_address(&dest_mode, self.pc + 3) as usize;
                     self.store(dest, left_value + right_value);
-                    self.pc += 4;
                 }
-                Opcode::Multiply => {
-                    let left_value = self.load(left_mode, self.pc + 1);
-                    let right_value = self.load(right_mode, self.pc + 2);
-                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
+                Opcode::Multiply(left_mode, right_mode, dest_mode) => {
+                    let left_value = self.load_value(&left_mode, self.pc + 1);
+                    let right_value = self.load_value(&right_mode, self.pc + 2);
+                    let dest = self.load_address(&dest_mode, self.pc + 3) as usize;
                     self.store(dest, left_value * right_value);
-                    self.pc += 4;
                 }
-                Opcode::Input => {
+                Opcode::Input(mode) => {
                     if self.inputs.is_empty() {
                         return Ok(StepResult::NeedInput);
                     }
-
-                    let dest = self.load(Mode::Immediate, self.pc + 1) as usize;
+                    let dest = self.load_address(&mode, self.pc + 1);
                     let input = self.inputs.pop_front().unwrap();
                     self.store(dest, input);
-                    self.pc += 2;
                 }
-                Opcode::Output => {
-                    let output = self.load(Mode::Indirect, self.pc + 1);
-                    self.pc += 2;
-                    return Ok(StepResult::OutputAvailable(output));
+                Opcode::Output(mode) => {
+                    let value = self.load_value(&mode, self.pc + 1);
+                    self.pc += opcode.len();
+                    return Ok(StepResult::OutputAvailable(value));
                 }
-                Opcode::JumpIfLess => {
-                    let value = self.load(left_mode, self.pc + 1);
+                Opcode::JumpIfTrue(value_mode, dest_mode) => {
+                    let value = self.load_value(&value_mode, self.pc + 1);
                     if value != 0 {
-                        self.pc = self.load(right_mode, self.pc + 2) as usize;
-                    } else {
-                        self.pc += 3;
+                        self.pc = self.load_value(&dest_mode, self.pc + 2) as usize;
+                        continue;
                     }
                 }
-                Opcode::JumpIfEqual => {
-                    let value = self.load(left_mode, self.pc + 1);
+                Opcode::JumpIfFalse(value_mode, dest_mode) => {
+                    let value = self.load_value(&value_mode, self.pc + 1);
                     if value == 0 {
-                        self.pc = self.load(right_mode, self.pc + 2) as usize;
-                    } else {
-                        self.pc += 3;
+                        self.pc = self.load_value(&dest_mode, self.pc + 2) as usize;
+                        continue;
                     }
                 }
-                Opcode::IsLess => {
-                    let left_value = self.load(left_mode, self.pc + 1);
-                    let right_value = self.load(right_mode, self.pc + 2);
-                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
+                Opcode::IsLess(left_mode, right_mode, dest_mode) => {
+                    let left_value = self.load_value(&left_mode, self.pc + 1);
+                    let right_value = self.load_value(&right_mode, self.pc + 2);
+                    let dest = self.load_address(&dest_mode, self.pc + 3) as usize;
                     let result = if left_value < right_value { 1 } else { 0 };
                     self.store(dest, result);
-                    self.pc += 4;
                 }
-                Opcode::IsEqual => {
-                    let left_value = self.load(left_mode, self.pc + 1);
-                    let right_value = self.load(right_mode, self.pc + 2);
-                    let dest = self.load(Mode::Immediate, self.pc + 3) as usize;
-                    let result = if left_value == right_value { 1 } else { 0 };
+                Opcode::IsEqual(left_mode, right_mode, dest_mode) => {
+                    let left = self.load_value(&left_mode, self.pc + 1);
+                    let right = self.load_value(&right_mode, self.pc + 2);
+                    let dest = self.load_address(&dest_mode, self.pc + 3) as usize;
+                    let result = if left == right { 1 } else { 0 };
                     self.store(dest, result);
-                    self.pc += 4;
+                }
+                Opcode::ModifyBase(mode) => {
+                    self.base += self.load_value(&mode, self.pc + 1);
                 }
                 Opcode::End => {
-                    self.pc = self.mem.len();
                     return Ok(StepResult::Finished);
                 }
             }
+
+            self.pc += opcode.len();
         }
     }
 }

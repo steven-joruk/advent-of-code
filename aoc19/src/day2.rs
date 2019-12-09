@@ -1,4 +1,4 @@
-use crate::intcode::{Computer, Mode};
+use crate::intcode::{Computer, Mode, StepResult};
 
 static INPUT: &str = include_str!("../res/2");
 
@@ -8,24 +8,24 @@ pub fn solve() {
 }
 
 fn part1() {
-    let program: Vec<i32> = INPUT
+    let program: Vec<i64> = INPUT
         .split(',')
-        .map(|s| s.parse::<i32>().unwrap())
+        .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
     let mut cpu = Computer::new(&program);
     cpu.store(1, 12);
     cpu.store(2, 12);
     cpu.run().unwrap();
-    let result = cpu.load(Mode::Immediate, 0);
+    let result = cpu.load_value(&Mode::Immediate, 0);
 
     println!("2.1 {}", result);
 }
 
 fn part2() {
-    let program: Vec<i32> = INPUT
+    let program: Vec<i64> = INPUT
         .split(',')
-        .map(|s| s.parse::<i32>().unwrap())
+        .map(|s| s.parse::<i64>().unwrap())
         .collect();
 
     let desired_result = 19_690_720;
@@ -35,10 +35,14 @@ fn part2() {
             let mut cpu = Computer::new(&program);
             cpu.store(1, noun);
             cpu.store(2, verb);
-            cpu.run().unwrap();
-            if cpu.load(Mode::Immediate, 0) == desired_result {
-                println!("2.2 {}", 100 * noun + verb);
-                return;
+            match cpu.run().unwrap() {
+                StepResult::Finished => {
+                    if cpu.load_value(&Mode::Immediate, 0) == desired_result {
+                        println!("2.2 {}", 100 * noun + verb);
+                        return;
+                    }
+                }
+                output => panic!("Unexpected output: {:?}", output),
             }
         }
     }
