@@ -4,6 +4,12 @@ use std::error::Error;
 static INPUT: &str = include_str!("../res/9");
 
 pub fn solve() -> Result<(), Box<dyn Error>> {
+    part1()?;
+    part2()?;
+    Ok(())
+}
+
+pub fn part1() -> Result<(), Box<dyn Error>> {
     let program: Vec<i64> = INPUT
         .split(',')
         .map(|s| s.parse::<i64>().unwrap())
@@ -15,6 +21,26 @@ pub fn solve() -> Result<(), Box<dyn Error>> {
     loop {
         match cpu.run()? {
             StepResult::OutputAvailable(v) => println!("9.1 {}", v),
+            StepResult::Finished => break,
+            output => panic!("Unexpected output: {:?}", output),
+        }
+    }
+
+    Ok(())
+}
+
+pub fn part2() -> Result<(), Box<dyn Error>> {
+    let program: Vec<i64> = INPUT
+        .split(',')
+        .map(|s| s.parse::<i64>().unwrap())
+        .collect();
+
+    let mut cpu = Computer::new(&program);
+    cpu.add_input(2);
+
+    loop {
+        match cpu.run()? {
+            StepResult::OutputAvailable(v) => println!("9.2 {}", v),
             StepResult::Finished => break,
             output => panic!("Unexpected output: {:?}", output),
         }
